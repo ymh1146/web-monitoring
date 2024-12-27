@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>网站状态监控</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/plotly.js/2.9.0/plotly.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-bg: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #6c757d;
+        --border-radius: 16px;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        --transition: all 0.3s ease;
+        --accent-color: #3498db;
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 1rem;
+        --spacing-md: 1.5rem;
+        --spacing-lg: 2rem;
+        --spacing-xl: 2.5rem;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--primary-bg);
+        color: var(--text-primary);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        width: 100%;
+        flex: 1;
+      }
+
+      .header-container {
+        background-color: var(--card-bg);
+        box-shadow: var(--shadow);
+        padding: var(--spacing-xl) 0;
+        margin-bottom: var(--spacing-xl);
+      }
+
+      .header {
+        max-width: 1400px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 0 var(--spacing-lg);
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .period-selector {
+        text-align: center;
+        margin-top: 1.5rem;
+      }
+
+      .period-tabs {
+        display: inline-flex;
+        gap: 1rem;
+        background: #fff;
+        padding: 0.5rem;
+        border-radius: 16px;
+        border: 2px solid #3498db;
+      }
+
+      .period-tab {
+        padding: 0.5rem 1rem;
+        color: #6c757d;
+        background: none;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .period-tab:hover {
+        color: #2c3e50;
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .period-tab.active {
+        color: #3498db;
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+        align-items: start;
+        justify-content: center;
+        margin: var(--spacing-lg) auto;
+        max-width: 1200px;
+        padding: 0 var(--spacing-md);
+      }
+
+      .chart-container {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: var(--spacing-md);
+        transition: var(--transition);
+        aspect-ratio: 1;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      .chart-container > div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .chart-container:hover {
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(4px);
+      }
+
+      .modal-content {
+        position: relative;
+        width: 80vw;
+        height: 80vh;
+        max-width: 1000px;
+        max-height: 800px;
+        background-color: var(--card-bg);
+        margin: 5vh auto;
+        padding: var(--spacing-lg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+      }
+
+      .close {
+        position: absolute;
+        right: var(--spacing-sm);
+        top: var(--spacing-sm);
+        width: 32px;
+        height: 32px;
+        background-color: var(--primary-bg);
+        color: var(--text-secondary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: var(--transition);
+        z-index: 1002;
+        border: none;
+        outline: none;
+        padding: 0;
+      }
+
+      .close:hover {
+        background-color: #e9ecef;
+        color: var(--text-primary);
+        transform: rotate(90deg);
+      }
+
+      #detail-chart {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      #detail-chart > div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .footer {
+        background-color: var(--card-bg);
+        box-shadow: var(--shadow);
+        padding: 1.5rem 0;
+        margin-top: 2rem;
+        text-align: center;
+      }
+
+      .footer-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      .footer a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+      }
+
+      .footer a:hover {
+        color: var(--text-primary);
+      }
+
+      .footer i {
+        font-size: 1.2rem;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: var(--spacing-xs);
+        }
+
+        .header {
+          padding: 0 1rem;
+        }
+
+        .header h1 {
+          font-size: 1.5rem;
+        }
+
+        .header p {
+          font-size: 0.9rem;
+        }
+
+        .period-selector select {
+          width: 80%;
+          max-width: 200px;
+          font-size: 0.9rem;
+          padding: 0.5rem 1.5rem 0.5rem 0.8rem;
+        }
+
+        .charts-grid {
+          grid-template-columns: 1fr;
+          gap: var(--spacing-md);
+          padding: 0 var(--spacing-sm);
+          margin: var(--spacing-md) auto;
+        }
+
+        .chart-container {
+          padding: var(--spacing-sm);
+          max-width: 350px;
+        }
+
+        .modal-content {
+          width: 95vw;
+          height: 95vw;
+          max-height: 95vh;
+          padding: var(--spacing-sm);
+          margin: 2.5vh auto;
+        }
+
+        .close {
+          right: 0.5rem;
+          top: 0.5rem;
+          width: 28px;
+          height: 28px;
+          font-size: 1rem;
+        }
+
+        #detail-chart {
+          padding: var(--spacing-xs);
+        }
+
+        .period-tabs {
+          gap: 0.5rem;
+        }
+
+        .period-tab {
+          padding: 0.5rem 0.8rem;
+          font-size: 0.9rem;
+        }
+      }
+
+      @media (max-width: 768px) and (orientation: landscape) {
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .chart-container {
+          max-width: 350px;
+        }
+
+        .modal-content {
+          width: 80vh;
+          height: 80vh;
+          max-width: 90vw;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-container">
+      <div class="header">
+        <h1>网站状态监控</h1>
+        <p>每5分钟监控一次网站状态，每小时更新一次图表，数据保留30天</p>
+        <div class="period-selector">
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="changePeriod('24')">
+              最近24小时
+            </button>
+            <button class="period-tab" onclick="changePeriod('168')">
+              最近7天
+            </button>
+            <button class="period-tab" onclick="changePeriod('720')">
+              最近30天
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="charts-grid" id="charts-grid">
+        <!-- 图表容器将由JavaScript动态生成 -->
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="footer-content">
+        <a
+          href="https://github.com/ymh1146/web-monitoring"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="fab fa-github"></i>
+          <span>GitHub</span>
+        </a>
+        <a href="{{ url_for('settings') }}" class="settings-link" title="设置">
+          <i class="fas fa-cog"></i>
+          <span>设置</span>
+        </a>
+      </div>
+    </footer>
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <button class="close" aria-label="关闭">&times;</button>
+        <div id="detail-chart"></div>
+      </div>
+    </div>
+    <script>
+      var allData = {
+          '24': {
+              data: {{ data_24h|safe }},
+              layout: {{ layout_24h|safe }},
+              chartsData: {{ charts_data_24h|safe }}
+          },
+          '168': {
+              data: {{ data_168h|safe }},
+              layout: {{ layout_168h|safe }},
+              chartsData: {{ charts_data_168h|safe }}
+          },
+          '720': {
+              data: {{ data_720h|safe }},
+              layout: {{ layout_720h|safe }},
+              chartsData: {{ charts_data_720h|safe }}
+          }
+      };
+
+      var currentPeriod = '24';
+      var currentData = allData[currentPeriod];
+      var modal = document.getElementById('modal');
+      var modalContent = document.querySelector('.modal-content');
+      var closeBtn = document.querySelector('.close');
+
+      function initModalEvents() {
+
+          closeBtn.addEventListener('click', function(e) {
+              e.preventDefault();
+              e.stopPropagation();
+              closeModal();
+          });
+
+          modal.addEventListener('click', function(e) {
+              if (e.target === modal) {
+                  closeModal();
+              }
+          });
+
+
+          modalContent.addEventListener('click', function(e) {
+              e.stopPropagation();
+          });
+      }
+
+      function closeModal() {
+          modal.style.display = 'none';
+          document.body.style.overflow = '';
+      }
+
+      function showModal() {
+          modal.style.display = 'block';
+          document.body.style.overflow = 'hidden';
+      }
+
+      function showDetailChart(chartData, data) {
+          var detailData = [{
+              ...data,
+              domain: {x: [0, 1], y: [0, 1]},
+              textfont: {
+                  size: window.innerWidth <= 768 ? 12 : 16,
+                  color: 'var(--text-primary)'
+              },
+              title: {
+                  text: chartData.url + '<br>当前状态: ' + chartData.status,
+                  font: {
+                      size: window.innerWidth <= 768 ? 14 : 24,
+                      color: chartData.status_color
+                  },
+                  position: "middle center"
+              }
+          }];
+
+          var detailLayout = {
+              autosize: true,
+              showlegend: false,
+              template: 'plotly_white',
+              paper_bgcolor: 'rgba(0,0,0,0)',
+              plot_bgcolor: 'rgba(0,0,0,0)',
+              margin: {t: 60, b: 30, l: 30, r: 30},
+              title: {
+                  y: 0.97,
+                  pad: {b: 15}
+              }
+          };
+
+          showModal();
+
+          Plotly.newPlot('detail-chart', detailData, detailLayout, {
+              responsive: true,
+              displayModeBar: false
+          }).then(updateDetailChart);
+      }
+
+      function updateCharts(period) {
+          var data = allData[period].data;
+          var layout = allData[period].layout;
+          var chartsData = allData[period].chartsData;
+
+          var chartsGrid = document.getElementById('charts-grid');
+          chartsGrid.innerHTML = '';
+
+
+          chartsData.forEach((chartData, index) => {
+              var chartContainer = document.createElement('div');
+              chartContainer.className = 'chart-container';
+              chartContainer.id = `chart-${index}`;
+              chartsGrid.appendChild(chartContainer);
+
+              var singleData = [data[index]];
+              var singleLayout = {
+                  ...layout[index],
+                  paper_bgcolor: 'rgba(0,0,0,0)',
+                  plot_bgcolor: 'rgba(0,0,0,0)',
+                  margin: {t: 50, b: 30, l: 30, r: 30},
+                  height: undefined
+              };
+
+              Plotly.newPlot(`chart-${index}`, singleData, singleLayout, {
+                  responsive: true,
+                  displayModeBar: false
+              }).then(function() {
+
+                  document.getElementById(`chart-${index}`).onclick = function() {
+                      showDetailChart(chartData, data[index]);
+                  };
+              });
+          });
+
+
+          resizeCharts();
+
+          currentPeriod = period;
+          currentData = allData[period];
+      }
+
+      function resizeCharts() {
+
+          var containers = document.querySelectorAll('.chart-container');
+          containers.forEach(container => {
+              var containerWidth = container.clientWidth;
+              var containerHeight = container.clientHeight;
+
+
+              if (window.innerWidth <= 768) {
+                  containerHeight = containerWidth;
+              }
+
+              Plotly.relayout(container.id, {
+                  width: containerWidth,
+                  height: containerHeight,
+                  'font.size': window.innerWidth <= 768 ? 8 : 12
+              });
+          });
+      }
+
+      function changePeriod(period) {
+
+          document.querySelectorAll('.period-tab').forEach(tab => {
+              tab.classList.remove('active');
+          });
+          document.querySelector(`.period-tab[onclick*="${period}"]`).classList.add('active');
+
+          // 更新图表
+          updateCharts(period);
+      }
+
+      window.addEventListener('resize', resizeCharts);
+      window.addEventListener('orientationchange', function() {
+          setTimeout(resizeCharts, 100);
+      });
+
+      function updateDetailChart() {
+          var modalContent = document.querySelector('.modal-content');
+          var width = modalContent.clientWidth - (window.innerWidth <= 768 ? 30 : 60);
+          var height = modalContent.clientHeight - (window.innerWidth <= 768 ? 30 : 60);
+
+          if (window.innerWidth <= 768) {
+              height = width;
+          }
+
+          Plotly.relayout('detail-chart', {
+              width: width,
+              height: height,
+              'font.size': window.innerWidth <= 768 ? 10 : 16
+          });
+      }
+
+      window.onresize = function() {
+          if (document.getElementById('modal').style.display === 'block') {
+              updateDetailChart();
+          }
+      }
+
+      window.onload = function() {
+
+          if (!document.querySelector('.chart-container')) {
+              window.location.reload(true);
+          }
+      };
+
+      // 初始化图表
+      updateCharts(currentPeriod);
+      initModalEvents();
+    </script>
+  </body>
+</html>

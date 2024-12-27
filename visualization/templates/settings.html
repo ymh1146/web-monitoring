@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>设置 - 网站监控系统</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <link
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      .container {
+        max-width: 800px;
+        margin-top: 2rem;
+        margin-bottom: 2rem;
+        min-height: calc(100vh - 160px);
+      }
+      .website-list {
+        list-style: none;
+        padding: 0;
+        margin: 20px 0;
+      }
+      .website-item {
+        display: flex;
+        align-items: center;
+        padding: 10px;
+        margin: 5px 0;
+        background: #fff;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        cursor: move;
+      }
+      .website-item:hover {
+        background: #f5f5f5;
+      }
+      .website-number {
+        margin-right: 15px;
+        color: #666;
+        font-weight: bold;
+        min-width: 30px;
+      }
+      .website-input {
+        flex: 1;
+        margin-right: 10px;
+      }
+      .drag-handle {
+        color: #999;
+        margin-right: 10px;
+        cursor: move;
+      }
+      .delete-btn {
+        color: #dc3545;
+        cursor: pointer;
+        padding: 5px;
+      }
+      .alert {
+        margin-bottom: 1rem;
+      }
+      #messageBox {
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        z-index: 1050;
+      }
+      .loading-spinner {
+        display: none;
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1050;
+        background: rgba(0, 0, 0, 0.7);
+        padding: 20px;
+        border-radius: 10px;
+        text-align: center;
+        color: white;
+      }
+      .loading-spinner .spinner-border {
+        width: 3rem;
+        height: 3rem;
+        margin-bottom: 1rem;
+      }
+      .footer {
+        background-color: var(--bs-light);
+        box-shadow: 0 -2px 4px rgba(0, 0, 0, 0.05);
+        padding: 1.5rem 0;
+        margin-top: auto;
+        text-align: center;
+        position: relative;
+        bottom: 0;
+        width: 100%;
+      }
+      .footer-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+      }
+      .footer a {
+        color: var(--bs-secondary);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: color 0.3s ease;
+      }
+      .footer a:hover {
+        color: var(--bs-primary);
+      }
+      .footer i {
+        font-size: 1.2rem;
+      }
+      body {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h2 class="mb-4">系统设置</h2>
+
+      {% with messages = get_flashed_messages() %} {% if messages %} {% for
+      message in messages %}
+      <div
+        class="alert alert-success alert-dismissible fade show system-message"
+        role="alert"
+      >
+        {{ message }}
+        <button
+          type="button"
+          class="btn-close"
+          data-bs-dismiss="alert"
+          aria-label="Close"
+        ></button>
+      </div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <form
+        action="{{ url_for('update_settings') }}"
+        method="post"
+        id="settingsForm"
+      >
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">认证设置</h5>
+          </div>
+          <div class="card-body">
+            <div class="form-check mb-3">
+              <input
+                class="form-check-input"
+                type="checkbox"
+                id="require_password"
+                name="require_password"
+                value="true"
+                {%
+                if
+                require_password
+                %}checked{%
+                endif
+                %}
+              />
+              <label class="form-check-label" for="require_password">
+                启用密码保护
+              </label>
+            </div>
+            <div class="mb-3">
+              <label for="password" class="form-label"
+                >修改密码（留空表示不修改）</label
+              >
+              <input
+                type="password"
+                class="form-control"
+                id="password"
+                name="password"
+                placeholder="输入新密码"
+              />
+            </div>
+          </div>
+        </div>
+
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">监控网站管理</h5>
+          </div>
+          <div class="card-body">
+            <ul class="website-list" id="websiteList">
+              {% for website in websites %}
+              <li class="website-item" draggable="true">
+                <i class="fas fa-grip-vertical drag-handle"></i>
+                <span class="website-number">{{ loop.index }}</span>
+                <input
+                  type="text"
+                  name="websites[]"
+                  value="{{ website }}"
+                  class="website-input"
+                  required
+                />
+                <i
+                  class="fas fa-times delete-btn"
+                  onclick="removeWebsite(this)"
+                ></i>
+              </li>
+              {% endfor %}
+            </ul>
+            <button
+              type="button"
+              class="btn btn-secondary mt-2"
+              onclick="addWebsite()"
+            >
+              添加网站
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-between">
+          <div class="action-buttons">
+            <a href="{{ url_for('status') }}" class="btn btn-secondary">返回</a>
+            <button type="button" class="btn btn-info" id="updateChartsBtn">
+              更新图表
+            </button>
+          </div>
+          <div class="action-buttons">
+            <button type="submit" class="btn btn-primary">保存设置</button>
+            <a href="{{ url_for('logout') }}" class="btn btn-danger">登出</a>
+          </div>
+        </div>
+      </form>
+    </div>
+
+    <footer class="footer">
+      <div class="footer-content">
+        <a
+          href="https://github.com/ymh1146/web-monitoring"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="fab fa-github"></i>
+          <span>GitHub</span>
+        </a>
+        <a href="{{ url_for('status') }}" title="返回监控页面">
+          <i class="fas fa-chart-line"></i>
+          <span>监控页面</span>
+        </a>
+      </div>
+    </footer>
+
+    <!-- 消息提示框 -->
+    <div id="messageBox"></div>
+
+    <!-- 加载动画 -->
+    <div class="loading-spinner" id="loadingSpinner">
+      <div class="spinner-border" role="status">
+        <span class="visually-hidden">Loading...</span>
+      </div>
+      <p>更新图表时间稍长，请耐心等待！</p>
+    </div>
+
+    <!-- 对话框 -->
+    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
+      <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+          <div class="modal-header" style="border-bottom: none">
+            <h5 class="modal-title">确认操作</h5>
+            <button
+              type="button"
+              class="btn-close"
+              data-bs-dismiss="modal"
+              aria-label="Close"
+            ></button>
+          </div>
+          <div class="modal-body">
+            <p id="confirmMessage"></p>
+          </div>
+          <div class="modal-footer" style="border-top: none">
+            <button
+              type="button"
+              class="btn btn-secondary"
+              data-bs-dismiss="modal"
+            >
+              取消
+            </button>
+            <button type="button" class="btn btn-primary" id="confirmBtn">
+              继续
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script>
+      let originalWebsites = new Set(Array.from(document.querySelectorAll('input[name="websites[]"]')).map(input => input.value));
+      let hasUnsavedChanges = false;
+
+      function showMessage(message, type = 'info') {
+          const messageBox = document.getElementById('messageBox');
+          const alert = document.createElement('div');
+          alert.className = `alert alert-${type} alert-dismissible fade show`;
+          alert.innerHTML = `
+              ${message}
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          `;
+          messageBox.appendChild(alert);
+
+          // 3秒后自动消失
+          setTimeout(() => {
+              alert.classList.remove('show');
+              setTimeout(() => alert.remove(), 150);
+          }, 3000);
+      }
+
+      function addWebsite() {
+          const list = document.getElementById('websiteList');
+          const newItem = document.createElement('li');
+          newItem.className = 'website-item';
+          newItem.draggable = true;
+
+          const number = list.children.length + 1;
+          newItem.innerHTML = `
+              <i class="fas fa-grip-vertical drag-handle"></i>
+              <span class="website-number">${number}</span>
+              <input type="text" name="websites[]" class="website-input" required>
+              <i class="fas fa-times delete-btn" onclick="removeWebsite(this)"></i>
+          `;
+
+          list.appendChild(newItem);
+          addDragListeners(newItem);
+          updateNumbers();
+          hasUnsavedChanges = true;
+      }
+
+      function removeWebsite(btn) {
+          btn.parentElement.remove();
+          updateNumbers();
+          hasUnsavedChanges = true;
+      }
+
+      function updateNumbers() {
+          const items = document.querySelectorAll('.website-number');
+          items.forEach((item, index) => {
+              item.textContent = index + 1;
+          });
+      }
+
+      let confirmCallback = null;
+      const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+
+      function showConfirm(message, callback) {
+          document.getElementById('confirmMessage').textContent = message;
+          confirmCallback = callback;
+          confirmModal.show();
+      }
+
+      document.getElementById('confirmBtn').addEventListener('click', function() {
+          confirmModal.hide();
+          if (confirmCallback) {
+              confirmCallback();
+              confirmCallback = null;
+          }
+      });
+
+      function confirmUpdateCharts() {
+          const currentWebsites = new Set(Array.from(document.querySelectorAll('input[name="websites[]"]')).map(input => input.value));
+          const websitesChanged = hasUnsavedChanges || !setsEqual(originalWebsites, currentWebsites);
+
+          const message = websitesChanged
+              ? '如果网站设置有修改，请先保存设置后再更新图表，是否继续？'
+              : '确定要更新图表吗？这可能需要一些时间。';
+
+          showConfirm(message, function() {
+              showLoadingSpinner();
+              window.location.href = "{{ url_for('update_charts') }}";
+          });
+      }
+
+      function setsEqual(a, b) {
+          return a.size === b.size && [...a].every(value => b.has(value));
+      }
+
+      function showLoadingSpinner() {
+          const loadingSpinner = document.getElementById('loadingSpinner');
+          loadingSpinner.style.display = 'block';
+      }
+
+      function hideLoadingSpinner() {
+          const loadingSpinner = document.getElementById('loadingSpinner');
+          loadingSpinner.style.display = 'none';
+      }
+
+      document.getElementById('settingsForm').addEventListener('input', function() {
+          hasUnsavedChanges = true;
+      });
+
+      document.getElementById('settingsForm').addEventListener('submit', function() {
+          showMessage('正在保存设置...', 'info');
+      });
+
+      {% with messages = get_flashed_messages() %}
+          {% if messages %}
+              {% for message in messages %}
+                  showMessage('{{ message }}', 'success');
+              {% endfor %}
+          {% endif %}
+      {% endwith %}
+
+      const list = document.getElementById('websiteList');
+      let draggedItem = null;
+
+      function addDragListeners(item) {
+          item.addEventListener('dragstart', function(e) {
+              draggedItem = item;
+              setTimeout(() => item.classList.add('dragging'), 0);
+          });
+
+          item.addEventListener('dragend', function(e) {
+              draggedItem = null;
+              item.classList.remove('dragging');
+              updateNumbers();
+          });
+
+          item.addEventListener('dragover', function(e) {
+              e.preventDefault();
+              if (this === draggedItem) return;
+
+              const rect = this.getBoundingClientRect();
+              const y = e.clientY - rect.top;
+              if (y < rect.height / 2) {
+                  this.parentNode.insertBefore(draggedItem, this);
+              } else {
+                  this.parentNode.insertBefore(draggedItem, this.nextSibling);
+              }
+          });
+      }
+
+      document.querySelectorAll('.website-item').forEach(addDragListeners);
+
+      document.addEventListener('DOMContentLoaded', function() {
+
+          const systemMessages = document.querySelectorAll('.system-message');
+          systemMessages.forEach(message => {
+              setTimeout(() => {
+                  message.classList.remove('show');
+                  setTimeout(() => message.remove(), 150);
+              }, 5000);
+          });
+
+          document.getElementById('updateChartsBtn').addEventListener('click', function(e) {
+              e.preventDefault();
+              confirmUpdateCharts();
+          });
+      });
+    </script>
+  </body>
+</html>
