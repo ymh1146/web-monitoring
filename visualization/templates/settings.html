@@ -30,17 +30,19 @@
         margin: 20px 0;
       }
       .website-item {
-        display: flex;
-        align-items: center;
-        padding: 10px;
-        margin: 5px 0;
+        padding: 15px;
+        margin: 10px 0;
         background: #fff;
         border: 1px solid #ddd;
         border-radius: 4px;
-        cursor: move;
       }
       .website-item:hover {
         background: #f5f5f5;
+      }
+      .website-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 10px;
       }
       .website-number {
         margin-right: 15px;
@@ -48,9 +50,8 @@
         font-weight: bold;
         min-width: 30px;
       }
-      .website-input {
-        flex: 1;
-        margin-right: 10px;
+      .website-controls {
+        margin-left: auto;
       }
       .drag-handle {
         color: #999;
@@ -127,6 +128,22 @@
         display: flex;
         flex-direction: column;
       }
+      .website-body {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+      .request-body-toggle {
+        cursor: pointer;
+        color: #0d6efd;
+        user-select: none;
+      }
+      .request-body-content {
+        display: none;
+      }
+      .request-body-content.show {
+        display: block;
+      }
     </style>
   </head>
   <body>
@@ -200,19 +217,74 @@
             <ul class="website-list" id="websiteList">
               {% for website in websites %}
               <li class="website-item" draggable="true">
-                <i class="fas fa-grip-vertical drag-handle"></i>
-                <span class="website-number">{{ loop.index }}</span>
-                <input
-                  type="text"
-                  name="websites[]"
-                  value="{{ website }}"
-                  class="website-input"
-                  required
-                />
-                <i
-                  class="fas fa-times delete-btn"
-                  onclick="removeWebsite(this)"
-                ></i>
+                <div class="website-header">
+                  <i class="fas fa-grip-vertical drag-handle"></i>
+                  <span class="website-number">{{ loop.index }}</span>
+                  <div class="website-controls">
+                    <i
+                      class="fas fa-times delete-btn"
+                      onclick="removeWebsite(this)"
+                    ></i>
+                  </div>
+                </div>
+                <div class="website-body">
+                  <div class="form-group">
+                    <label>URL</label>
+                    <input
+                      type="text"
+                      name="websites[][url]"
+                      value="{{ website.url }}"
+                      class="form-control"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>备注</label>
+                    <input
+                      type="text"
+                      name="websites[][note]"
+                      value="{{ website.note }}"
+                      class="form-control"
+                      placeholder="可选：添加网站备注"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <div
+                      class="request-body-toggle"
+                      onclick="toggleRequestBody(this)"
+                    >
+                      <i class="fas fa-chevron-right"></i> 自定义请求体
+                    </div>
+                    <div class="request-body-content">
+                      <textarea
+                        name="websites[][request_body]"
+                        class="form-control mt-2"
+                        rows="3"
+                        placeholder="可选：输入JSON格式的请求体"
+                      >
+{{ website.request_body }}</textarea
+                      >
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <div
+                      class="request-body-toggle"
+                      onclick="toggleRequestHeaders(this)"
+                    >
+                      <i class="fas fa-chevron-right"></i> 自定义请求头
+                    </div>
+                    <div class="request-body-content">
+                      <textarea
+                        name="websites[][request_headers]"
+                        class="form-control mt-2"
+                        rows="3"
+                        placeholder="可选：输入JSON格式的请求头"
+                      >
+{{ website.request_headers | default({}) | tojson }}</textarea
+                      >
+                    </div>
+                  </div>
+                </div>
               </li>
               {% endfor %}
             </ul>
@@ -241,6 +313,12 @@
       </form>
     </div>
 
+    <div id="messageBox"></div>
+    <div class="loading-spinner">
+      <div class="spinner-border text-light" role="status"></div>
+      <div>正在更新图表...</div>
+    </div>
+
     <footer class="footer">
       <div class="footer-content">
         <a
@@ -251,218 +329,148 @@
           <i class="fab fa-github"></i>
           <span>GitHub</span>
         </a>
-        <a href="{{ url_for('status') }}" title="返回监控页面">
-          <i class="fas fa-chart-line"></i>
-          <span>监控页面</span>
-        </a>
       </div>
     </footer>
 
-    <!-- 消息提示框 -->
-    <div id="messageBox"></div>
-
-    <!-- 加载动画 -->
-    <div class="loading-spinner" id="loadingSpinner">
-      <div class="spinner-border" role="status">
-        <span class="visually-hidden">Loading...</span>
-      </div>
-      <p>更新图表时间稍长，请耐心等待！</p>
-    </div>
-
-    <!-- 对话框 -->
-    <div class="modal fade" id="confirmModal" tabindex="-1" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-          <div class="modal-header" style="border-bottom: none">
-            <h5 class="modal-title">确认操作</h5>
-            <button
-              type="button"
-              class="btn-close"
-              data-bs-dismiss="modal"
-              aria-label="Close"
-            ></button>
-          </div>
-          <div class="modal-body">
-            <p id="confirmMessage"></p>
-          </div>
-          <div class="modal-footer" style="border-top: none">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              data-bs-dismiss="modal"
-            >
-              取消
-            </button>
-            <button type="button" class="btn btn-primary" id="confirmBtn">
-              继续
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://lf6-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
     <script>
-      let originalWebsites = new Set(Array.from(document.querySelectorAll('input[name="websites[]"]')).map(input => input.value));
-      let hasUnsavedChanges = false;
-
-      function showMessage(message, type = 'info') {
-          const messageBox = document.getElementById('messageBox');
-          const alert = document.createElement('div');
-          alert.className = `alert alert-${type} alert-dismissible fade show`;
-          alert.innerHTML = `
-              ${message}
-              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-          `;
-          messageBox.appendChild(alert);
-
-          // 3秒后自动消失
-          setTimeout(() => {
-              alert.classList.remove('show');
-              setTimeout(() => alert.remove(), 150);
-          }, 3000);
-      }
-
       function addWebsite() {
-          const list = document.getElementById('websiteList');
-          const newItem = document.createElement('li');
-          newItem.className = 'website-item';
-          newItem.draggable = true;
+        const list = document.getElementById("websiteList");
+        const count = list.children.length + 1;
 
-          const number = list.children.length + 1;
-          newItem.innerHTML = `
-              <i class="fas fa-grip-vertical drag-handle"></i>
-              <span class="website-number">${number}</span>
-              <input type="text" name="websites[]" class="website-input" required>
+        const li = document.createElement("li");
+        li.className = "website-item";
+        li.draggable = true;
+
+        li.innerHTML = `
+          <div class="website-header">
+            <i class="fas fa-grip-vertical drag-handle"></i>
+            <span class="website-number">${count}</span>
+            <div class="website-controls">
               <i class="fas fa-times delete-btn" onclick="removeWebsite(this)"></i>
-          `;
+            </div>
+          </div>
+          <div class="website-body">
+            <div class="form-group">
+              <label>URL</label>
+              <input type="text" name="websites[][url]" class="form-control" required />
+            </div>
+            <div class="form-group">
+              <label>备注</label>
+              <input type="text" name="websites[][note]" class="form-control" placeholder="可选：添加网站备注" />
+            </div>
+            <div class="form-group">
+              <div class="request-body-toggle" onclick="toggleRequestBody(this)">
+                <i class="fas fa-chevron-right"></i> 自定义请求体
+              </div>
+              <div class="request-body-content">
+                <textarea name="websites[][request_body]" class="form-control mt-2" rows="3" placeholder="可选：输入JSON格式的请求体"></textarea>
+              </div>
+            </div>
+            <div class="form-group">
+              <div class="request-body-toggle" onclick="toggleRequestHeaders(this)">
+                <i class="fas fa-chevron-right"></i> 自定义请求头
+              </div>
+              <div class="request-body-content">
+                <textarea name="websites[][request_headers]" class="form-control mt-2" rows="3" placeholder="可选：输入JSON格式的请求头"></textarea>
+              </div>
+            </div>
+          </div>
+        `;
 
-          list.appendChild(newItem);
-          addDragListeners(newItem);
-          updateNumbers();
-          hasUnsavedChanges = true;
+        list.appendChild(li);
+        updateNumbers();
       }
 
       function removeWebsite(btn) {
-          btn.parentElement.remove();
-          updateNumbers();
-          hasUnsavedChanges = true;
+        const item = btn.closest(".website-item");
+        item.remove();
+        updateNumbers();
       }
 
       function updateNumbers() {
-          const items = document.querySelectorAll('.website-number');
-          items.forEach((item, index) => {
-              item.textContent = index + 1;
-          });
+        const items = document.querySelectorAll(".website-item");
+        items.forEach((item, index) => {
+          item.querySelector(".website-number").textContent = index + 1;
+        });
       }
 
-      let confirmCallback = null;
-      const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
-
-      function showConfirm(message, callback) {
-          document.getElementById('confirmMessage').textContent = message;
-          confirmCallback = callback;
-          confirmModal.show();
+      function toggleRequestBody(element) {
+        const content = element.nextElementSibling;
+        const icon = element.querySelector("i");
+        content.classList.toggle("show");
+        icon.classList.toggle("fa-chevron-right");
+        icon.classList.toggle("fa-chevron-down");
       }
 
-      document.getElementById('confirmBtn').addEventListener('click', function() {
-          confirmModal.hide();
-          if (confirmCallback) {
-              confirmCallback();
-              confirmCallback = null;
-          }
-      });
-
-      function confirmUpdateCharts() {
-          const currentWebsites = new Set(Array.from(document.querySelectorAll('input[name="websites[]"]')).map(input => input.value));
-          const websitesChanged = hasUnsavedChanges || !setsEqual(originalWebsites, currentWebsites);
-
-          const message = websitesChanged
-              ? '如果网站设置有修改，请先保存设置后再更新图表，是否继续？'
-              : '确定要更新图表吗？这可能需要一些时间。';
-
-          showConfirm(message, function() {
-              showLoadingSpinner();
-              window.location.href = "{{ url_for('update_charts') }}";
-          });
+      function toggleRequestHeaders(element) {
+        const content = element.nextElementSibling;
+        const icon = element.querySelector("i");
+        content.classList.toggle("show");
+        icon.classList.toggle("fa-chevron-right");
+        icon.classList.toggle("fa-chevron-down");
       }
 
-      function setsEqual(a, b) {
-          return a.size === b.size && [...a].every(value => b.has(value));
-      }
+      document
+        .getElementById("updateChartsBtn")
+        .addEventListener("click", function () {
+          document.querySelector(".loading-spinner").style.display = "block";
+          fetch("{{ url_for('update_charts') }}")
+            .then((response) => {
+              document.querySelector(".loading-spinner").style.display = "none";
+              if (response.redirected) {
+                window.location.href = response.url;
+              }
+            })
+            .catch((error) => {
+              document.querySelector(".loading-spinner").style.display = "none";
+              console.error("Error:", error);
+            });
+        });
 
-      function showLoadingSpinner() {
-          const loadingSpinner = document.getElementById('loadingSpinner');
-          loadingSpinner.style.display = 'block';
-      }
-
-      function hideLoadingSpinner() {
-          const loadingSpinner = document.getElementById('loadingSpinner');
-          loadingSpinner.style.display = 'none';
-      }
-
-      document.getElementById('settingsForm').addEventListener('input', function() {
-          hasUnsavedChanges = true;
-      });
-
-      document.getElementById('settingsForm').addEventListener('submit', function() {
-          showMessage('正在保存设置...', 'info');
-      });
-
-      {% with messages = get_flashed_messages() %}
-          {% if messages %}
-              {% for message in messages %}
-                  showMessage('{{ message }}', 'success');
-              {% endfor %}
-          {% endif %}
-      {% endwith %}
-
-      const list = document.getElementById('websiteList');
+      // 拖拽排序功能
+      const websiteList = document.getElementById("websiteList");
       let draggedItem = null;
 
-      function addDragListeners(item) {
-          item.addEventListener('dragstart', function(e) {
-              draggedItem = item;
-              setTimeout(() => item.classList.add('dragging'), 0);
-          });
-
-          item.addEventListener('dragend', function(e) {
-              draggedItem = null;
-              item.classList.remove('dragging');
-              updateNumbers();
-          });
-
-          item.addEventListener('dragover', function(e) {
-              e.preventDefault();
-              if (this === draggedItem) return;
-
-              const rect = this.getBoundingClientRect();
-              const y = e.clientY - rect.top;
-              if (y < rect.height / 2) {
-                  this.parentNode.insertBefore(draggedItem, this);
-              } else {
-                  this.parentNode.insertBefore(draggedItem, this.nextSibling);
-              }
-          });
-      }
-
-      document.querySelectorAll('.website-item').forEach(addDragListeners);
-
-      document.addEventListener('DOMContentLoaded', function() {
-
-          const systemMessages = document.querySelectorAll('.system-message');
-          systemMessages.forEach(message => {
-              setTimeout(() => {
-                  message.classList.remove('show');
-                  setTimeout(() => message.remove(), 150);
-              }, 5000);
-          });
-
-          document.getElementById('updateChartsBtn').addEventListener('click', function(e) {
-              e.preventDefault();
-              confirmUpdateCharts();
-          });
+      websiteList.addEventListener("dragstart", function (e) {
+        draggedItem = e.target;
+        e.target.style.opacity = "0.5";
       });
+
+      websiteList.addEventListener("dragend", function (e) {
+        e.target.style.opacity = "";
+        updateNumbers();
+      });
+
+      websiteList.addEventListener("dragover", function (e) {
+        e.preventDefault();
+        const afterElement = getDragAfterElement(websiteList, e.clientY);
+        const draggable = document.querySelector(".website-item.dragging");
+        if (afterElement == null) {
+          websiteList.appendChild(draggedItem);
+        } else {
+          websiteList.insertBefore(draggedItem, afterElement);
+        }
+      });
+
+      function getDragAfterElement(container, y) {
+        const draggableElements = [
+          ...container.querySelectorAll(".website-item:not(.dragging)"),
+        ];
+
+        return draggableElements.reduce(
+          (closest, child) => {
+            const box = child.getBoundingClientRect();
+            const offset = y - box.top - box.height / 2;
+            if (offset < 0 && offset > closest.offset) {
+              return { offset: offset, element: child };
+            } else {
+              return closest;
+            }
+          },
+          { offset: Number.NEGATIVE_INFINITY }
+        ).element;
+      }
     </script>
   </body>
 </html>

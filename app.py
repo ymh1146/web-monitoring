@@ -19,6 +19,7 @@ import time
 import os
 from threading import Thread
 from datetime import datetime, timedelta
+import json
 
 app = Flask(
     __name__,
@@ -140,7 +141,27 @@ def update_settings():
             auth_cfg["pwd"] = request.form["password"]
         save_auth_cfg(auth_cfg)
 
-        websites = request.form.getlist("websites[]")
+        # 处理网站配置
+        websites = []
+        urls = request.form.getlist("websites[][url]")
+        notes = request.form.getlist("websites[][note]")
+        request_bodies = request.form.getlist("websites[][request_body]")
+        request_headers = request.form.getlist("websites[][request_headers]")
+        
+        for i in range(len(urls)):
+            if urls[i].strip():
+                try:
+                    headers = json.loads(request_headers[i]) if i < len(request_headers) and request_headers[i].strip() else {}
+                except json.JSONDecodeError:
+                    headers = {}
+                    
+                websites.append({
+                    "url": urls[i],
+                    "note": notes[i] if i < len(notes) else "",
+                    "request_body": request_bodies[i] if i < len(request_bodies) else "",
+                    "request_headers": headers
+                })
+        
         if websites:
             save_sites(websites)
             flash("设置已保存")

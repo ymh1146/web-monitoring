@@ -6,7 +6,7 @@ from utils.logger import log_msg
 
 
 def init_db():
-
+    """初始化数据库"""
     conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
 
@@ -20,7 +20,6 @@ def init_db():
     cur_ver = res[0] if res else 0
 
     if cur_ver < 1:
-
         c.execute(
             """CREATE TABLE IF NOT EXISTS site_status
                      (ttmp DATETIME NOT NULL,
@@ -49,7 +48,12 @@ def init_db():
 
 
 def save_status(url, status):
-
+    """保存网站状态
+    
+    Args:
+        url: 网站URL
+        status: 状态字符串
+    """
     try:
         conn = sqlite3.connect(DB_PATH, timeout=20)
         ttmp = datetime.now()
@@ -66,7 +70,12 @@ def save_status(url, status):
 
 
 def get_status_data(hrs, url=None):
-
+    """获取状态数据
+    
+    Args:
+        hrs: 时间跨度（小时）
+        url: 网站URL，如果为None则获取所有网站数据
+    """
     try:
         conn = sqlite3.connect(DB_PATH, timeout=20)
 
@@ -74,6 +83,10 @@ def get_status_data(hrs, url=None):
         start_time = end_time - timedelta(hours=hrs)
 
         if url:
+            # 如果传入的是网站配置字典，提取URL
+            if isinstance(url, dict):
+                url = url["url"]
+                
             df = pd.read_sql_query(
                 """
                 SELECT ttmp, url, status
@@ -106,7 +119,7 @@ def get_status_data(hrs, url=None):
 
 
 def cleanup_old_data():
-
+    """清理旧数据"""
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH, timeout=20)
@@ -123,7 +136,7 @@ def cleanup_old_data():
 
 
 def clear_all_data():
-
+    """清空所有数据"""
     conn = None
     try:
         conn = sqlite3.connect(DB_PATH, timeout=20)
