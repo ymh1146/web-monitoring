@@ -1,0 +1,758 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>网站状态监控</title>
+    <link
+      rel="icon"
+      type="image/x-icon"
+      href="{{ url_for('static', filename='favicon.ico') }}"
+    />
+    <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/plotly.js/2.9.0/plotly.min.js"></script>
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.0.0/css/all.min.css"
+    />
+    <style>
+      :root {
+        --primary-bg: #f8f9fa;
+        --card-bg: #ffffff;
+        --text-primary: #2c3e50;
+        --text-secondary: #6c757d;
+        --border-radius: 16px;
+        --shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        --transition: all 0.3s ease;
+        --accent-color: #3498db;
+        --spacing-xs: 0.5rem;
+        --spacing-sm: 1rem;
+        --spacing-md: 1.5rem;
+        --spacing-lg: 2rem;
+        --spacing-xl: 2.5rem;
+      }
+
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      html {
+        overflow-y: auto;
+        overflow-x: hidden;
+        width: 100%;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background-color: var(--primary-bg);
+        color: var(--text-primary);
+        line-height: 1.5;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+        width: 100%;
+        overflow-x: hidden;
+        position: relative;
+      }
+
+      body.modal-open {
+        overflow: hidden;
+      }
+
+      .container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 2rem;
+        width: 100%;
+        flex: 1;
+        box-sizing: border-box;
+        overflow-x: hidden;
+      }
+
+      .header-container {
+        background-color: var(--card-bg);
+        box-shadow: var(--shadow);
+        padding: var(--spacing-xl) 0;
+        margin-bottom: var(--spacing-xl);
+        width: 100%;
+        overflow-x: hidden;
+      }
+
+      .header {
+        max-width: 1400px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 0 var(--spacing-lg);
+      }
+
+      .header h1 {
+        font-size: 1.8rem;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: var(--spacing-sm);
+      }
+
+      .header p {
+        color: var(--text-secondary);
+        font-size: 1rem;
+        margin-bottom: var(--spacing-md);
+      }
+
+      .period-selector {
+        text-align: center;
+        margin-top: 1.5rem;
+      }
+
+      .period-tabs {
+        display: inline-flex;
+        gap: 1rem;
+        background: #fff;
+        padding: 0.5rem;
+        border-radius: 16px;
+        border: 2px solid #3498db;
+      }
+
+      .period-tab {
+        padding: 0.5rem 1rem;
+        color: #6c757d;
+        background: none;
+        border: none;
+        border-radius: 12px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .period-tab:hover {
+        color: #2c3e50;
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .period-tab.active {
+        color: #3498db;
+        background-color: rgba(52, 152, 219, 0.1);
+      }
+
+      .charts-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: var(--spacing-lg);
+        align-items: start;
+        justify-content: center;
+        margin: var(--spacing-lg) auto;
+        max-width: 1200px;
+        padding: 0 var(--spacing-md);
+        width: 100%;
+        box-sizing: border-box;
+        position: relative;
+        left: 0;
+        transition: none;
+      }
+
+      .chart-container {
+        background-color: var(--card-bg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        padding: var(--spacing-md);
+        transition: var(--transition);
+        aspect-ratio: 1;
+        width: 100%;
+        max-width: 400px;
+        margin: 0 auto;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+        box-sizing: border-box;
+      }
+
+      .chart-container > div {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .chart-container:hover {
+        box-shadow: 0 8px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-2px);
+      }
+
+      .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        overflow-y: auto;
+        padding: 0;
+      }
+
+      .modal-content {
+        position: relative;
+        width: 80vw;
+        height: 80vh;
+        max-width: 1000px;
+        max-height: 800px;
+        background-color: var(--card-bg);
+        margin: 5vh auto;
+        padding: var(--spacing-lg);
+        border-radius: var(--border-radius);
+        box-shadow: var(--shadow);
+        display: flex;
+        flex-direction: column;
+        box-sizing: border-box;
+      }
+
+      .close {
+        position: absolute;
+        right: var(--spacing-sm);
+        top: var(--spacing-sm);
+        width: 32px;
+        height: 32px;
+        background-color: var(--primary-bg);
+        color: var(--text-secondary);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 1.2rem;
+        transition: var(--transition);
+        z-index: 1002;
+        border: none;
+        outline: none;
+        padding: 0;
+      }
+
+      .close:hover {
+        background-color: #e9ecef;
+        color: var(--text-primary);
+        transform: rotate(90deg);
+      }
+
+      #detail-chart {
+        flex: 1;
+        width: 100%;
+        height: 100%;
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+      }
+
+      #detail-chart > div {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      .footer {
+        background-color: var(--card-bg);
+        box-shadow: var(--shadow);
+        padding: 1.5rem 0;
+        margin-top: 2rem;
+        text-align: center;
+      }
+
+      .footer-content {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 0 2rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 1rem;
+      }
+
+      .footer a {
+        color: var(--text-secondary);
+        text-decoration: none;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        transition: var(--transition);
+      }
+
+      .footer a:hover {
+        color: var(--text-primary);
+      }
+
+      .footer i {
+        font-size: 1.2rem;
+      }
+
+      .version-info {
+        color: var(--text-secondary);
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-size: 0.9rem;
+        opacity: 0.8;
+      }
+
+      .version-info i {
+        font-size: 1rem;
+      }
+
+      @media (max-width: 768px) {
+        .container {
+          padding: var(--spacing-xs);
+        }
+
+        .header {
+          padding: 0 1rem;
+        }
+
+        .header h1 {
+          font-size: 1.5rem;
+        }
+
+        .header p {
+          font-size: 0.9rem;
+        }
+
+        .period-selector select {
+          width: 80%;
+          max-width: 200px;
+          font-size: 0.9rem;
+          padding: 0.5rem 1.5rem 0.5rem 0.8rem;
+        }
+
+        .charts-grid {
+          grid-template-columns: 1fr;
+          gap: var(--spacing-md);
+          padding: 0 var(--spacing-sm);
+          margin: var(--spacing-md) auto;
+        }
+
+        .chart-container {
+          padding: var(--spacing-sm);
+          max-width: 350px;
+        }
+
+        .modal-content {
+          width: 95vw;
+          height: 95vw;
+          max-height: 95vh;
+          padding: var(--spacing-sm);
+          margin: 2.5vh auto;
+        }
+
+        .close {
+          right: 0.5rem;
+          top: 0.5rem;
+          width: 28px;
+          height: 28px;
+          font-size: 1rem;
+        }
+
+        #detail-chart {
+          min-height: 200px;
+        }
+
+        .period-tabs {
+          gap: 0.5rem;
+        }
+
+        .period-tab {
+          padding: 0.5rem 0.8rem;
+          font-size: 0.9rem;
+        }
+      }
+
+      @media (max-width: 768px) and (orientation: landscape) {
+        .charts-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .chart-container {
+          max-width: 350px;
+        }
+
+        .modal-content {
+          width: 90vw;
+          height: 80vh;
+          margin: 10vh auto;
+        }
+      }
+
+      .message-modal {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        max-width: 400px;
+        width: 90%;
+        padding: 2rem;
+        text-align: center;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .message-content {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+      }
+
+      .message-buttons {
+        display: flex;
+        gap: 1rem;
+        justify-content: center;
+      }
+
+      .btn {
+        padding: 0.5rem 1.5rem;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: all 0.3s ease;
+      }
+
+      .btn-primary {
+        background-color: #3498db;
+        color: white;
+      }
+
+      .btn-primary:hover {
+        background-color: #2980b9;
+      }
+
+      .btn-secondary {
+        background-color: #95a5a6;
+        color: white;
+      }
+
+      .btn-secondary:hover {
+        background-color: #7f8c8d;
+      }
+
+      .loading-spinner {
+        width: 50px;
+        height: 50px;
+        border: 5px solid #f3f3f3;
+        border-top: 5px solid #3498db;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% {
+          transform: rotate(0deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      html {
+        overflow-y: auto;
+        width: 100vw;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="header-container">
+      <div class="header">
+        <h1>网站状态监控</h1>
+        <p>每5分钟监控一次网站状态，每小时更新一次图表，数据保留30天</p>
+        <div class="period-selector">
+          <div class="period-tabs">
+            <button class="period-tab active" onclick="changePeriod('24')">
+              最近24小时
+            </button>
+            <button class="period-tab" onclick="changePeriod('168')">
+              最近7天
+            </button>
+            <button class="period-tab" onclick="changePeriod('720')">
+              最近30天
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="container">
+      <div class="charts-grid" id="charts-grid">
+        <!-- 图表容器将由JavaScript动态生成 -->
+      </div>
+    </div>
+    <footer class="footer">
+      <div class="footer-content">
+        <a
+          href="https://github.com/ymh1146/web-monitoring"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <i class="fab fa-github"></i>
+          <span>GitHub</span>
+        </a>
+        <a
+          href="{{ url_for('settings.set_page') }}"
+          class="settings-link"
+          title="设置"
+        >
+          <i class="fas fa-cog"></i>
+          <span>设置</span>
+        </a>
+        <span class="version-info">
+          <i class="fas fa-code-branch"></i>
+          <span>v{{ version }}</span>
+        </span>
+      </div>
+    </footer>
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <button class="close" aria-label="关闭">&times;</button>
+        <div id="detail-chart"></div>
+      </div>
+    </div>
+
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/limonte-sweetalert2/11.4.4/sweetalert2.min.css"
+    />
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/limonte-sweetalert2/11.4.4/sweetalert2.min.js"></script>
+
+    <script>
+
+      var allData = {
+        '24': {
+          data: {{ data_24h|safe }},
+          layout: {{ layout_24h|safe }},
+          chartsData: {{ charts_data_24h|safe }}
+        },
+        '168': {
+          data: {{ data_168h|safe }},
+          layout: {{ layout_168h|safe }},
+          chartsData: {{ charts_data_168h|safe }}
+        },
+        '720': {
+          data: {{ data_720h|safe }},
+          layout: {{ layout_720h|safe }},
+          chartsData: {{ charts_data_720h|safe }}
+        }
+      };
+
+      var currentPeriod = '24';
+      var currentData = allData[currentPeriod];
+      var modal = document.getElementById('modal');
+      var modalContent = document.querySelector('.modal-content');
+      var closeBtn = document.querySelector('.close');
+
+      function updateChartsWithConfirm() {
+        Swal.fire({
+          title: '确定要更新图表吗？',
+          icon: 'question',
+          showCancelButton: true,
+          confirmButtonText: '确定',
+          cancelButtonText: '取消'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            updateCharts();
+          }
+        });
+      }
+
+      function updateCharts() {
+        Swal.fire({
+          title: '更新中...',
+          text: '更新图表时间稍长，请耐心等待！',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        fetch('/update_charts')
+          .then(response => response.json())
+          .then(data => {
+            if (data.success) {
+              Swal.fire({
+                title: '更新成功',
+                icon: 'success',
+                confirmButtonText: '确定'
+              }).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                title: '更新失败',
+                text: data.message,
+                icon: 'error',
+                confirmButtonText: '确定'
+              });
+            }
+          })
+          .catch(error => {
+            Swal.fire({
+              title: '更新失败',
+              text: '更新图表时出错: ' + error,
+              icon: 'error',
+              confirmButtonText: '确定'
+            });
+          });
+      }
+
+      function showDetailChart(chartData, data) {
+        showModal();
+
+        var index = currentData.data.findIndex(d => d === data);
+        var singleData = [data];
+        var singleLayout = Object.assign({}, currentData.layout[index], {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: {t: 50, b: 30, l: 30, r: 30},
+            height: undefined
+        });
+
+        if (singleData[0].title && singleData[0].title.text) {
+            singleData[0].title.text = singleData[0].title.text.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        }
+
+        Plotly.newPlot('detail-chart', singleData, singleLayout, {
+            responsive: true,
+            displayModeBar: false
+        }).then(updateDetailChart);
+      }
+
+      function initModalEvents() {
+        closeBtn.onclick = function(e) {
+          e.preventDefault();
+          e.stopPropagation();
+          closeModal();
+        };
+
+        modal.onclick = function(e) {
+          if (e.target === modal) {
+            closeModal();
+          }
+        };
+
+        modalContent.onclick = function(e) {
+          e.stopPropagation();
+        };
+      }
+
+      function closeModal() {
+        modal.style.display = 'none';
+        document.body.classList.remove('modal-open');
+      }
+
+      function showModal() {
+        modal.style.display = 'block';
+        document.body.classList.add('modal-open');
+      }
+
+      function updateDetailChart() {
+        var modalContent = document.querySelector('.modal-content');
+        var width = modalContent.clientWidth - 40;
+        var height = modalContent.clientHeight - 40;
+
+        Plotly.relayout('detail-chart', {
+          width: width,
+          height: height,
+          'font.size': window.innerWidth <= 768 ? 10 : 16
+        });
+      }
+
+      function updateCharts(period) {
+        var data = allData[period].data;
+        var layout = allData[period].layout;
+        var chartsData = allData[period].chartsData;
+
+        var chartsGrid = document.getElementById('charts-grid');
+        chartsGrid.innerHTML = '';
+
+        chartsData.forEach((chartData, index) => {
+          var chartContainer = document.createElement('div');
+          chartContainer.className = 'chart-container';
+          chartContainer.id = `chart-${index}`;
+          chartsGrid.appendChild(chartContainer);
+
+          var singleData = [data[index]];
+          var singleLayout = Object.assign({}, layout[index], {
+            paper_bgcolor: 'rgba(0,0,0,0)',
+            plot_bgcolor: 'rgba(0,0,0,0)',
+            margin: {t: 50, b: 30, l: 30, r: 30},
+            height: undefined
+          });
+
+          if (singleData[0].title && singleData[0].title.text) {
+            singleData[0].title.text = singleData[0].title.text.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+          }
+
+          Plotly.newPlot(`chart-${index}`, singleData, singleLayout, {
+            responsive: true,
+            displayModeBar: false
+          }).then(function() {
+            document.getElementById(`chart-${index}`).onclick = function() {
+              showDetailChart(chartData, data[index]);
+            };
+          });
+        });
+
+        resizeCharts();
+      }
+
+      function resizeCharts() {
+        var containers = document.querySelectorAll('.chart-container');
+        containers.forEach(container => {
+          var containerWidth = container.clientWidth;
+          var containerHeight = container.clientHeight;
+
+          if (window.innerWidth <= 768) {
+            containerHeight = containerWidth;
+          }
+
+          Plotly.relayout(container.id, {
+            width: containerWidth,
+            height: containerHeight,
+            'font.size': window.innerWidth <= 768 ? 8 : 12
+          });
+        });
+      }
+
+      function changePeriod(period) {
+        document.querySelectorAll('.period-tab').forEach(tab => {
+          tab.classList.remove('active');
+        });
+
+        const currentTab = document.querySelector(`.period-tab[onclick*="${period}"]`);
+        if (currentTab) {
+          currentTab.classList.add('active');
+        }
+
+        if (allData[period]) {
+          currentPeriod = period;
+          currentData = allData[period];
+          updateCharts(period);
+        }
+      }
+
+
+      updateCharts(currentPeriod);
+      initModalEvents();
+
+      window.onresize = function() {
+        resizeCharts();
+        if (modal.style.display === 'block') {
+          updateDetailChart();
+        }
+      };
+    </script>
+  </body>
+</html>

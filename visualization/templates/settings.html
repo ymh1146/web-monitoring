@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>监控设置</title>
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/css/bootstrap.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/font-awesome/6.0.0/css/all.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap-icons/1.10.5/font/bootstrap-icons.min.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/limonte-sweetalert2/11.4.4/sweetalert2.min.css"
+    />
+    <style>
+      .container {
+        max-width: 800px;
+      }
+      .form-group {
+        margin-bottom: 1rem;
+      }
+      .site-item {
+        background: #f8f9fa;
+        padding: 1rem;
+        margin-bottom: 1rem;
+        border-radius: 0.5rem;
+        position: relative;
+      }
+      .site-item.dragging {
+        opacity: 0.5;
+      }
+      .delete-btn {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 0.25rem;
+        border: none;
+        background: none;
+      }
+      .delete-btn:hover {
+        color: #c82333;
+      }
+      .site-number {
+        display: inline-block;
+        width: 24px;
+        height: 24px;
+        line-height: 24px;
+        text-align: center;
+        background: #6c757d;
+        color: white;
+        border-radius: 50%;
+        margin-right: 0.5rem;
+        font-size: 0.875rem;
+      }
+      .drag-handle {
+        cursor: move;
+        color: #6c757d;
+        margin-right: 0.5rem;
+      }
+      .optional-fields {
+        margin-top: 1rem;
+        display: none;
+      }
+      .optional-fields.show {
+        display: block;
+      }
+      .toggle-optional {
+        color: #0d6efd;
+        cursor: pointer;
+        user-select: none;
+        padding: 0.5rem 0;
+      }
+      .toggle-optional i {
+        transition: transform 0.2s;
+      }
+      .toggle-optional.active i {
+        transform: rotate(90deg);
+      }
+      .action-buttons {
+        display: flex;
+        gap: 1rem;
+      }
+      .action-buttons-right {
+        margin-left: auto;
+      }
+      .card-header {
+        cursor: pointer;
+        user-select: none;
+      }
+      .card-header .toggle-icon {
+        transition: transform 0.2s;
+      }
+      .card-header.collapsed .toggle-icon {
+        transform: rotate(-90deg);
+      }
+      .site-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+      }
+      .site-item-content {
+        display: none;
+        margin-top: 1rem;
+      }
+      .site-item-content.show {
+        display: block;
+      }
+      .push-item {
+        margin-bottom: 0.5rem;
+      }
+      .push-item-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        cursor: pointer;
+        padding: 0.5rem;
+        background: #f8f9fa;
+        border-radius: 0.25rem;
+      }
+      .push-item-content {
+        display: none;
+        padding: 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        margin-top: 0.5rem;
+      }
+      .push-item-content.show {
+        display: block;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container mt-5">
+      <h2 class="mb-4">监控设置</h2>
+
+      {% with messages = get_flashed_messages() %} {% if messages %} {% for
+      message in messages %}
+      <div class="alert alert-info">{{ message }}</div>
+      {% endfor %} {% endif %} {% endwith %}
+
+      <div class="card mb-4">
+        <div
+          class="card-header"
+          data-bs-toggle="collapse"
+          data-bs-target="#systemSettings"
+        >
+          <div class="d-flex align-items-center">
+            <i class="fas fa-chevron-right me-2 toggle-icon"></i>
+            <h5 class="mb-0">系统设置</h5>
+          </div>
+        </div>
+        <div id="systemSettings" class="collapse show">
+          <div class="card-body">
+            <div class="row">
+              <div class="col-md-6">
+                <form
+                  action="{{ url_for('settings.save_sys_set') }}"
+                  method="post"
+                >
+                  <div class="form-group">
+                    <label for="mon_intv">监控间隔（分钟）</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="mon_intv"
+                      name="mon_intv"
+                      value="{{ mon_intv }}"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="chart_upd_intv">图表更新间隔（分钟）</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="chart_upd_intv"
+                      name="chart_upd_intv"
+                      value="{{ chart_upd_intv }}"
+                      min="1"
+                      required
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label for="fav_ref_h">网站图标刷新时间（小时）</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      id="fav_ref_h"
+                      name="fav_ref_h"
+                      value="{{ fav_ref_h }}"
+                      min="1"
+                      required
+                    />
+                    <small class="form-text text-muted"
+                      >设置多久重新获取一次网站图标，避免频繁下载</small
+                    >
+                  </div>
+                  <button type="submit" class="btn btn-primary">
+                    保存系统设置
+                  </button>
+                </form>
+              </div>
+
+              <div class="col-md-6">
+                <form action="{{ url_for('settings.upd_set') }}" method="post">
+                  <div class="form-group">
+                    <div class="form-check">
+                      <input
+                        type="checkbox"
+                        class="form-check-input"
+                        id="req_pwd"
+                        name="req_pwd"
+                        value="true"
+                        {%
+                        if
+                        req_pwd
+                        %}checked{%
+                        endif
+                        %}
+                      />
+                      <label class="form-check-label" for="req_pwd"
+                        >启用密码保护</label
+                      >
+                    </div>
+                  </div>
+                  <div class="form-group">
+                    <label for="pwd">密码（留空则保持不变）</label>
+                    <input
+                      type="password"
+                      class="form-control"
+                      id="pwd"
+                      name="pwd"
+                    />
+                  </div>
+                  <button type="submit" class="btn btn-primary">
+                    保存密码设置
+                  </button>
+                </form>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div
+          class="card-header"
+          data-bs-toggle="collapse"
+          data-bs-target="#dataManagement"
+        >
+          <div class="d-flex align-items-center">
+            <i class="fas fa-chevron-right me-2 toggle-icon"></i>
+            <h5 class="mb-0">数据管理</h5>
+          </div>
+        </div>
+        <div id="dataManagement" class="collapse">
+          <div class="card-body">
+            <div class="d-flex gap-2">
+              <a
+                href="javascript:void(0)"
+                onclick="updateCharts()"
+                class="btn btn-outline-primary"
+                >更新图表</a
+              >
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div
+          class="card-header"
+          data-bs-toggle="collapse"
+          data-bs-target="#monitorSites"
+        >
+          <div class="d-flex align-items-center">
+            <i class="fas fa-chevron-right me-2 toggle-icon"></i>
+            <h5 class="mb-0">监控网站</h5>
+          </div>
+        </div>
+        <div id="monitorSites" class="collapse">
+          <div class="card-body">
+            <form
+              action="{{ url_for('settings.save_st_hdl') }}"
+              method="post"
+              id="sitesForm"
+              onsubmit="return validateForm()"
+            >
+              <div id="sitesList">
+                {% for site in sites %}
+                <div class="site-item" draggable="true">
+                  <div
+                    class="site-item-header"
+                    onclick="toggleSiteContent(this)"
+                  >
+                    <span class="site-number"></span>
+                    <i class="fas fa-grip-vertical drag-handle"></i>
+                    <span class="site-url">{{ site.url }}</span>
+                    <span class="site-note text-muted ms-2"
+                      >{{ site.note }}</span
+                    >
+                    <button
+                      type="button"
+                      class="delete-btn"
+                      onclick="removeSite(this)"
+                    >
+                      <i class="fas fa-times"></i>
+                    </button>
+                  </div>
+                  <div class="site-item-content">
+                    <div class="form-group">
+                      <label>网站URL</label>
+                      <input
+                        type="url"
+                        class="form-control"
+                        name="urls[]"
+                        value="{{ site.url }}"
+                        required
+                      />
+                    </div>
+                    <div class="form-group">
+                      <label>备注（可选）</label>
+                      <input
+                        type="text"
+                        class="form-control"
+                        name="notes[]"
+                        value="{{ site.note }}"
+                      />
+                    </div>
+                    <div class="toggle-optional" onclick="toggleOptional(this)">
+                      <i class="fas fa-chevron-right"></i> 高级选项
+                    </div>
+                    <div class="optional-fields">
+                      <div class="form-group">
+                        <label>请求头（可选，JSON格式）</label>
+                        <input
+                          type="text"
+                          class="form-control"
+                          name="hdrs[]"
+                          value="{{ site.req_hdrs if site.req_hdrs and site.req_hdrs != '{}' else '' }}"
+                          placeholder='{"User-Agent": "Custom Agent", "Authorization": "Bearer token"}'
+                        />
+                        <small class="form-text text-muted">如果为空则使用默认请求头</small>
+                      </div>
+                      <div class="form-group">
+                        <label>请求体（可选，JSON格式）</label>
+                        <input
+                          type="text"
+                          class="form-control"
+                          name="body[]"
+                          value="{{ site.req_body if site.req_body and site.req_body != '{}' else '' }}"
+                          placeholder='{"key": "value"}'
+                        />
+                        <small class="form-text text-muted">如果填写请求体，将使用POST请求方法</small>
+                      </div>
+                      <div class="form-group">
+                        <label>域名到期时间</label>
+                        <input
+                          type="date"
+                          class="form-control"
+                          name="expire_date[]"
+                          value="{{ site.expire_date }}"
+                        />
+                        <small class="form-text text-muted">格式：YYYY-MM-DD，留空则不显示到期提醒</small>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {% endfor %}
+              </div>
+              <button
+                type="button"
+                class="btn btn-outline-primary mt-3"
+                onclick="addSite()"
+              >
+                添加网站
+              </button>
+              <button type="submit" class="btn btn-primary mt-3">
+                保存网站设置
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mb-4">
+        <div
+          class="card-header"
+          data-bs-toggle="collapse"
+          data-bs-target="#pushSettings"
+        >
+          <div class="d-flex align-items-center">
+            <i class="fas fa-chevron-right me-2 toggle-icon"></i>
+            <h5 class="mb-0">推送设置</h5>
+          </div>
+        </div>
+        <div id="pushSettings" class="collapse">
+          <div class="card-body">
+            <form
+              action="{{ url_for('push.save_push_cfg_hdl') }}"
+              method="post"
+            >
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="wechat_enabled"
+                      name="wechat.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.wechat.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="wechat_enabled"
+                      >企业微信群机器人推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>Webhook地址</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="wechat.webhook"
+                      value="{{ push_config.wechat.webhook if push_config and push_config.wechat else '' }}"
+                      placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx"
+                    />
+                    <small class="form-text text-muted">
+                      在企业微信群中添加机器人，获取Webhook地址。
+                      <a
+                        href="https://developer.work.weixin.qq.com/document/path/91770"
+                        target="_blank"
+                        >查看文档</a
+                      >
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="serverchan_enabled"
+                      name="serverchan.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.serverchan.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="serverchan_enabled"
+                      >Server酱推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>SendKey</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="serverchan.send_key"
+                      value="{{ push_config.serverchan.send_key if push_config and push_config.serverchan else '' }}"
+                      placeholder="SCTxxxxxxxxxxxxxxx"
+                    />
+                    <small class="form-text text-muted">
+                      在Server酱中获取SendKey。
+                      <a href="https://sct.ftqq.com/sendkey" target="_blank"
+                        >前往获取</a
+                      >
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="pushplus_enabled"
+                      name="pushplus.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.pushplus.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="pushplus_enabled"
+                      >PushPlus推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>Token</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="pushplus.token"
+                      value="{{ push_config.pushplus.token if push_config and push_config.pushplus else '' }}"
+                      placeholder="xxxxxxxxxxxxxxx"
+                    />
+                    <small class="form-text text-muted">
+                      在PushPlus中获取Token。
+                      <a
+                        href="https://www.pushplus.plus/push1.html"
+                        target="_blank"
+                        >前往获取</a
+                      >
+                    </small>
+                  </div>
+                </div>
+              </div>
+
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="telegram_enabled"
+                      name="telegram.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.telegram.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="telegram_enabled"
+                      >Telegram推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>Bot Token</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="telegram.bot_token"
+                      value="{{ push_config.telegram.bot_token if push_config and push_config.telegram else '' }}"
+                      placeholder="123456:ABC-DEF1234ghIkl-zyx57W2v1u123ew11"
+                    />
+                    <small class="form-text text-muted"
+                      >在 @BotFather 处获取 Bot Token</small
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>Chat ID</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="telegram.chat_id"
+                      value="{{ push_config.telegram.chat_id if push_config and push_config.telegram else '' }}"
+                      placeholder="123456789"
+                    />
+                    <small class="form-text text-muted"
+                      >在 @GetIDBot 处获取 Chat ID</small
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>代理地址（可选）</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="telegram.proxy"
+                      value="{{ push_config.telegram.proxy if push_config and push_config.telegram else '' }}"
+                      placeholder="http://127.0.0.1:7890"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="email_enabled"
+                      name="email.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.email.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="email_enabled"
+                      >邮件推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>SMTP服务器</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="email.smtp_server"
+                      value="{{ push_config.email.smtp_server if push_config and push_config.email else '' }}"
+                      placeholder="smtp.gmail.com"
+                    />
+                    <small class="form-text text-muted"
+                      >常见邮箱的SMTP服务器：Gmail(smtp.gmail.com)、QQ邮箱(smtp.qq.com)、163邮箱(smtp.163.com)</small
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>SMTP端口</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      name="email.smtp_port"
+                      value="{{ push_config.email.smtp_port if push_config and push_config.email else 465 }}"
+                      placeholder="465"
+                    />
+                    <small class="form-text text-muted"
+                      >SSL加密端口通常为465，TLS加密端口通常为587</small
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>发件人邮箱</label>
+                    <input
+                      type="email"
+                      class="form-control"
+                      name="email.username"
+                      value="{{ push_config.email.username if push_config and push_config.email else '' }}"
+                      placeholder="your-email@example.com"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>邮箱密码</label>
+                    <input
+                      type="password"
+                      class="form-control"
+                      name="email.password"
+                      value="{{ push_config.email.password if push_config and push_config.email else '' }}"
+                      placeholder="邮箱密码或授权码"
+                    />
+                    <small class="form-text text-muted"
+                      >部分邮箱（如QQ邮箱）需要使用授权码而不是密码</small
+                    >
+                  </div>
+                  <div class="form-group">
+                    <label>收件人邮箱</label>
+                    <input
+                      type="email"
+                      class="form-control"
+                      name="email.to_addr"
+                      value="{{ push_config.email.to_addr if push_config and push_config.email else '' }}"
+                      placeholder="receiver@example.com"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-primary mt-3">
+                保存推送设置
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <div class="d-flex justify-content-between mt-4 mb-4">
+        <a href="{{ url_for('monitor.st_page') }}" class="btn btn-secondary">
+          <i class="fas fa-arrow-left"></i> 返回主页
+        </a>
+        <a href="{{ url_for('auth.logout') }}" class="btn btn-danger">
+          <i class="fas fa-sign-out-alt"></i> 退出登录
+        </a>
+      </div>
+    </div>
+
+    <script src="https://lf26-cdn-tos.bytecdntp.com/cdn/expire-1-M/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://lf9-cdn-tos.bytecdntp.com/cdn/expire-1-M/limonte-sweetalert2/11.4.4/sweetalert2.min.js"></script>
+    <script>
+      function toggleOptional(element) {
+        element.classList.toggle("active");
+        var optionalFields = element.nextElementSibling;
+        optionalFields.classList.toggle("show");
+      }
+
+      function toggleSiteContent(element) {
+        var content = element.nextElementSibling;
+        content.classList.toggle("show");
+      }
+
+      function togglePushContent(element) {
+        var content = element.nextElementSibling;
+        var icon = element.querySelector("i:first-child");
+        content.classList.toggle("show");
+        icon.style.transform = content.classList.contains("show")
+          ? "rotate(90deg)"
+          : "";
+      }
+
+      function addSite() {
+        var sitesList = document.getElementById("sitesList");
+        var newSite = document.createElement("div");
+        newSite.className = "site-item";
+        newSite.draggable = true;
+        newSite.innerHTML = `
+            <div class="site-item-header" onclick="toggleSiteContent(this)">
+                <span class="site-number"></span>
+                <i class="fas fa-grip-vertical drag-handle"></i>
+                <span class="site-url">新网站</span>
+                <button type="button" class="delete-btn" onclick="removeSite(this)">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="site-item-content">
+                <div class="form-group">
+                    <label>网站URL</label>
+                    <input type="url" class="form-control" name="urls[]" required>
+                </div>
+                <div class="form-group">
+                    <label>备注（可选）</label>
+                    <input type="text" class="form-control" name="notes[]">
+                </div>
+                <div class="toggle-optional" onclick="toggleOptional(this)">
+                    <i class="fas fa-chevron-right"></i> 高级选项
+                </div>
+                <div class="optional-fields">
+                    <div class="form-group">
+                        <label>请求头（可选，JSON格式）</label>
+                        <input type="text" class="form-control" name="hdrs[]"
+                               placeholder='{"User-Agent": "Custom Agent", "Authorization": "Bearer token"}'>
+                        <small class="form-text text-muted">如果为空则使用默认请求头</small>
+                    </div>
+                    <div class="form-group">
+                        <label>请求体（可选，JSON格式）</label>
+                        <input type="text" class="form-control" name="body[]"
+                               placeholder='{"key": "value"}'>
+                        <small class="form-text text-muted">如果填写请求体，将使用POST请求方法</small>
+                    </div>
+                    <div class="form-group">
+                        <label>域名到期时间</label>
+                        <input type="date" class="form-control" name="expire_date[]">
+                        <small class="form-text text-muted">格式：YYYY-MM-DD，留空则不显示到期提醒</small>
+                    </div>
+                </div>
+            </div>
+        `;
+        sitesList.appendChild(newSite);
+        updateSiteNumbers();
+        setupDragAndDrop();
+      }
+
+      function removeSite(button) {
+        Swal.fire({
+          title: '确定要删除这个网站吗？',
+          text: '删除后无法恢复！',
+          icon: 'warning',
+          showCancelButton: true,
+          confirmButtonText: '确定删除',
+          cancelButtonText: '取消',
+          confirmButtonColor: '#dc3545'
+        }).then((result) => {
+          if (result.isConfirmed) {
+            var siteItem = button.closest(".site-item");
+            siteItem.remove();
+            updateSiteNumbers();
+          }
+        });
+      }
+
+      function updateSiteNumbers() {
+        var siteItems = document.querySelectorAll(".site-item");
+        siteItems.forEach((item, index) => {
+          item.querySelector(".site-number").textContent = index + 1;
+        });
+      }
+
+      function updateCharts() {
+        Swal.fire({
+          title: '更新中...',
+          text: '正在检查网站状态并更新图表，请耐心等待！',
+          allowOutsideClick: false,
+          allowEscapeKey: false,
+          showConfirmButton: false,
+          didOpen: () => {
+            Swal.showLoading();
+          }
+        });
+
+        // 直接调用update_charts接口
+        fetch('/update_charts', {
+          method: 'POST'
+        })
+          .then(response => response.json())
+          .then(data => {
+            if (data.code === 0) {
+              Swal.fire({
+                title: '更新成功',
+                text: '网站状态已检查，图表已更新',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+              }).then(() => {
+                window.location.reload();
+              });
+            } else {
+              Swal.fire({
+                title: '更新失败',
+                text: data.msg || '未知错误',
+                icon: 'error'
+              });
+            }
+          })
+          .catch(error => {
+            Swal.fire({
+              title: '更新失败',
+              text: '更新图表时出错: ' + error,
+              icon: 'error'
+            });
+          });
+      }
+
+      function setupDragAndDrop() {
+        const siteItems = document.querySelectorAll(".site-item");
+        let draggedItem = null;
+
+        siteItems.forEach((item) => {
+          item.addEventListener("dragstart", function (e) {
+            draggedItem = this;
+            setTimeout(() => this.classList.add("dragging"), 0);
+          });
+
+          item.addEventListener("dragend", function () {
+            this.classList.remove("dragging");
+            draggedItem = null;
+            updateSiteNumbers();
+          });
+
+          item.addEventListener("dragover", function (e) {
+            e.preventDefault();
+            if (draggedItem === this) return;
+
+            const bounding = this.getBoundingClientRect();
+            const offset = bounding.y + bounding.height / 2;
+
+            if (e.clientY - offset > 0) {
+              this.parentNode.insertBefore(draggedItem, this.nextSibling);
+            } else {
+              this.parentNode.insertBefore(draggedItem, this);
+            }
+          });
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", function () {
+        updateSiteNumbers();
+        setupDragAndDrop();
+      });
+
+      function validateForm() {
+        var bodyInputs = document.getElementsByName("body[]");
+        var hdrsInputs = document.getElementsByName("hdrs[]");
+
+        for (var i = 0; i < bodyInputs.length; i++) {
+          var bodyValue = bodyInputs[i].value.trim();
+          var hdrsValue = hdrsInputs[i].value.trim();
+
+          if (bodyValue && bodyValue !== "{}") {
+            try {
+              JSON.parse(bodyValue);
+            } catch (e) {
+              alert("请求体必须是有效的JSON格式");
+              return false;
+            }
+          }
+
+          if (hdrsValue && hdrsValue !== "{}") {
+            try {
+              JSON.parse(hdrsValue);
+            } catch (e) {
+              alert("请求头必须是有效的JSON格式");
+              return false;
+            }
+          }
+        }
+        return true;
+      }
+    </script>
+  </body>
+</html>
