@@ -46,6 +46,12 @@ python up_app.py
 
 本次升级因为数据库结构发生变化，只同步网站配置，不同步其他内容，如果网站不多，最好重新安装使用。密码恢复默认密码：admin
 
+## Docker
+
+```bash
+docker run -p 5000:5000 ymh1146/web-monitoring:latest
+```
+
 ## 许可证
 
 MIT License @ heilo.cn
