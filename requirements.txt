@@ -1,0 +1,7 @@
+requests
+schedule
+pandas
+plotly
+jinja2
+flask
+beautifulsoup4
