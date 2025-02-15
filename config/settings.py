@@ -8,7 +8,7 @@ for dir in [DATA_DIR, STATIC_DIR]:
     if not os.path.exists(dir):
         os.makedirs(dir)
 
-VERSION = "1.4"
+VERSION = "1.5"
 
 
 DB_PATH = os.path.join(DATA_DIR, "mon.db")
@@ -116,6 +116,15 @@ PUSH_CFG = {
         "pwd": "",
         "to": "",
     },
+    "custom": {
+        "enabled": False,
+        "name": "",
+        "url": "",
+        "method": "POST",
+        "headers": "{}",
+        "body_tpl": "{}",
+        "timeout": 10
+    }
 }
 
 PUSH_TRG = {"err": True, "rec": True}  # 异常时推送、异常恢复时推送

@@ -19,7 +19,6 @@ def get_push_cfg_hdl():
 def save_push_cfg_hdl():
 
     try:
-
         push_cfg = {
             "wechat": {
                 "enabled": request.form.get("wechat.enabled") == "on",
@@ -47,6 +46,15 @@ def save_push_cfg_hdl():
                 "pwd": request.form.get("email.password", "").strip(),
                 "to": request.form.get("email.to_addr", "").strip(),
             },
+            "custom": {
+                "enabled": request.form.get("custom.enabled") == "on",
+                "name": request.form.get("custom.name", "").strip(),
+                "url": request.form.get("custom.url", "").strip(),
+                "method": request.form.get("custom.method", "POST").strip(),
+                "headers": request.form.get("custom.headers", "{}").strip(),
+                "body_tpl": request.form.get("custom.body_tpl", "{}").strip(),
+                "timeout": int(request.form.get("custom.timeout", 10))
+            }
         }
 
         save_push_config(push_cfg)

@@ -63,6 +63,15 @@ def set_page():
                 "password": push_cfg.get("email", {}).get("password", ""),
                 "to_addr": push_cfg.get("email", {}).get("to_addr", ""),
             },
+            "custom": {
+                "enabled": push_cfg.get("custom", {}).get("enabled", False),
+                "name": push_cfg.get("custom", {}).get("name", ""),
+                "url": push_cfg.get("custom", {}).get("url", ""),
+                "method": push_cfg.get("custom", {}).get("method", "POST"),
+                "headers": push_cfg.get("custom", {}).get("headers", "{}"),
+                "body_tpl": push_cfg.get("custom", {}).get("body_tpl", "{}"),
+                "timeout": push_cfg.get("custom", {}).get("timeout", 10)
+            }
         }
     else:
         push_cfg = {}

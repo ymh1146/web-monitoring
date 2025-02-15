@@ -688,6 +688,99 @@
                 </div>
               </div>
 
+              <div class="push-item">
+                <div class="push-item-header" onclick="togglePushContent(this)">
+                  <div class="form-check mb-0">
+                    <input
+                      type="checkbox"
+                      class="form-check-input"
+                      id="custom_enabled"
+                      name="custom.enabled"
+                      {%
+                      if
+                      push_config
+                      and
+                      push_config.custom.enabled
+                      %}checked{%
+                      endif
+                      %}
+                    />
+                    <label class="form-check-label" for="custom_enabled"
+                      >自定义推送</label
+                    >
+                  </div>
+                </div>
+                <div class="push-item-content">
+                  <div class="form-group">
+                    <label>推送名称</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="custom.name"
+                      value="{{ push_config.custom.name if push_config and push_config.custom else '' }}"
+                      placeholder="自定义推送名称"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>推送地址</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="custom.url"
+                      value="{{ push_config.custom.url if push_config and push_config.custom else '' }}"
+                      placeholder="https://example.com/api/push"
+                    />
+                  </div>
+                  <div class="form-group">
+                    <label>请求方法</label>
+                    <select class="form-control" name="custom.method">
+                      <option value="POST" {% if not push_config or not push_config.custom or push_config.custom.method == 'POST' %}selected{% endif %}>POST</option>
+                      <option value="GET" {% if push_config and push_config.custom and push_config.custom.method == 'GET' %}selected{% endif %}>GET</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>请求头（JSON格式）</label>
+                    <input
+                      type="text"
+                      class="form-control"
+                      name="custom.headers"
+                      value="{{ push_config.custom.headers if push_config and push_config.custom else '{}' }}"
+                      placeholder='{"Content-Type": "application/json"}'
+                    />
+                    <small class="form-text text-muted">
+                      请求头JSON格式，例如：{"Content-Type": "application/json", "Authorization": "Bearer token"}
+                    </small>
+                  </div>
+                  <div class="form-group">
+                    <label>消息模板（JSON格式）</label>
+                    <textarea
+                      class="form-control"
+                      name="custom.body_tpl"
+                      rows="4"
+                      placeholder='{"text": "${title}\n${content}", "time": "${time}"}'
+                    >{{ push_config.custom.body_tpl if push_config and push_config.custom else '{}' }}</textarea>
+                    <small class="form-text text-muted">
+                      支持的变量：<br>
+                      ${title} - 消息标题<br>
+                      ${content} - 消息内容<br>
+                      ${time} - 当前时间<br>
+                      ${level} - 消息级别(error/info)
+                    </small>
+                  </div>
+                  <div class="form-group">
+                    <label>超时时间（秒）</label>
+                    <input
+                      type="number"
+                      class="form-control"
+                      name="custom.timeout"
+                      value="{{ push_config.custom.timeout if push_config and push_config.custom else 10 }}"
+                      min="1"
+                      max="60"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <button type="submit" class="btn btn-primary mt-3">
                 保存推送设置
               </button>

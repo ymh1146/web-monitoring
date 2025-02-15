@@ -6,6 +6,7 @@ from email.mime.text import MIMEText
 from email.header import Header
 from core.database import get_push_config
 from core.utils import norm_url
+from datetime import datetime
 
 
 def push_wx(title, content, cfg):
@@ -169,10 +170,93 @@ def push_mail(title, content, cfg):
         log(f"邮件推送出错: {str(e)}")
 
 
+def push_custom(title, content, cfg):
+    try:
+        if not cfg.get("url"):
+            log("自定义推送地址未配置")
+            return
+            
+        # 准备变量数据
+        vars = {
+            "title": title,
+            "content": content,
+            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "level": "error" if "异常" in title else "info"
+        }
+        
+        # 替换模板变量
+        try:
+            headers = json.loads(cfg.get("headers", "{}"))
+            body_tpl = cfg.get("body_tpl", "{}")
+            body = json.loads(body_tpl)
+            
+            # 递归替换所有字符串值中的变量
+            def replace_vars(obj):
+                if isinstance(obj, dict):
+                    return {k: replace_vars(v) for k, v in obj.items()}
+                elif isinstance(obj, list):
+                    return [replace_vars(v) for v in obj]
+                elif isinstance(obj, str):
+                    result = obj
+                    for k, v in vars.items():
+                        result = result.replace(f"${{{k}}}", str(v))
+                    return result
+                return obj
+                
+            body = replace_vars(body)
+            
+        except json.JSONDecodeError:
+            log("JSON格式错误，尝试直接替换变量")
+            body = body_tpl
+            for k, v in vars.items():
+                body = body.replace(f"${{{k}}}", str(v))
+                
+        # 发送请求
+        method = cfg.get("method", "POST")
+        timeout = int(cfg.get("timeout", 10))
+        
+        # 根据Content-Type决定使用json还是data
+        content_type = headers.get('Content-Type', '').lower()
+        is_json = 'application/json' in content_type
+        
+        if method.upper() == "GET":
+            r = requests.get(
+                cfg["url"],
+                headers=headers,
+                timeout=timeout
+            )
+        else:
+            if is_json:
+                r = requests.post(
+                    cfg["url"],
+                    headers=headers,
+                    json=body,
+                    timeout=timeout
+                )
+            else:
+                # 如果不是JSON，尝试将body转换为字符串
+                if isinstance(body, (dict, list)):
+                    body = json.dumps(body)
+                r = requests.post(
+                    cfg["url"],
+                    headers=headers,
+                    data=body,
+                    timeout=timeout
+                )
+            
+        if r.status_code != 200:
+            log(f"自定义推送失败: {r.text}")
+            return
+            
+        log("自定义推送成功")
+        
+    except Exception as e:
+        log(f"自定义推送出错: {str(e)}")
+
+
 def send_msg(title, content, push_cfg=None):
     if not push_cfg:
         from core.database import get_push_config
-
         push_cfg = get_push_config()
 
     if not push_cfg:
@@ -193,6 +277,8 @@ def send_msg(title, content, push_cfg=None):
                 push_tg(title, content, cfg)
             elif push_type == "email":
                 push_mail(title, content, cfg)
+            elif push_type == "custom":
+                push_custom(title, content, cfg)
         except Exception as e:
             log(f"{push_type} 推送失败: {str(e)}")
             continue

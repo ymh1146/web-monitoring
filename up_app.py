@@ -5,7 +5,7 @@ from datetime import datetime
 from werkzeug.security import generate_password_hash
 
 
-DB_VER = "1.4"
+DB_VER = "1.5"
 DB_PATH = "data/mon.db"
 BAK_PATH = "data"
 LOCK_F = os.path.join(BAK_PATH, "upgrade.lock")
@@ -163,6 +163,25 @@ def up_from_1_3():
         return False
 
 
+def up_from_1_4():
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        c = conn.cursor()
+
+        c.execute(
+            "UPDATE system_config SET value = ? WHERE key = 'db_version'", (DB_VER,)
+        )
+
+        conn.commit()
+        conn.close()
+        print("从1.4版本升级到1.5版本成功")
+        return True
+
+    except Exception as e:
+        print(f"从1.4版本升级失败: {str(e)}")
+        return False
+
+
 def up_db():
 
     if not os.path.exists(DB_PATH):
@@ -196,6 +215,8 @@ def up_db():
         elif cur_ver == "1.3":
             result = up_from_1_3()
         elif cur_ver == "1.4":
+            result = up_from_1_4()
+        elif cur_ver == "1.5":
             print("数据库已经是最新版本")
             result = True
         else:

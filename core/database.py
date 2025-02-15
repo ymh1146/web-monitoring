@@ -68,7 +68,7 @@ def init_db():
          
             c.execute(
                 "INSERT INTO system_config (key, value) VALUES (?, ?)",
-                ("db_version", "1.4")
+                ("db_version", "1.5")
             )
 
             c.execute(
@@ -80,7 +80,7 @@ def init_db():
                 "INSERT INTO system_config (key, value) VALUES (?, ?)",
                 ("req_pwd", "1")
             )
-            log(f"初始化数据库完成，版本 1.4")
+            log(f"初始化数据库完成，版本 1.5")
 
         conn.commit()
         conn.close()
